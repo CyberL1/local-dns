@@ -1,0 +1,24 @@
+{
+  "name": "local-dns",
+  "version": "1.0.0",
+  "main": "src/index.ts",
+  "type": "module",
+  "scripts": {
+    "start": "node --experimental-strip-types src/index.ts",
+    "dev": "node --experimental-strip-types --watch src/index.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "dns-packet": "^5.6.1",
+    "dns2": "^2.1.0"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
+    "@types/dns-packet": "^5.6.5",
+    "@types/dns2": "^2.0.9",
+    "@types/node": "^22.13.9"
+  }
+}
