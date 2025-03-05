@@ -1,7 +1,35 @@
 import { createSocket } from "dgram";
-import { readFileSync } from "fs";
+import { existsSync, readFileSync, writeFileSync } from "fs";
 import dnsPacket from "dns-packet";
 import type { DNSRecord } from "./types.ts";
+import os from "os";
+
+if (!existsSync("db.json")) {
+  console.log("DB does not exist, creating");
+
+  const getLocalIP = () => {
+    const interfaces = os.networkInterfaces();
+    for (const name of Object.keys(interfaces)) {
+      for (const iface of interfaces[name] || []) {
+        if (iface.family === "IPv4" && !iface.internal) {
+          return iface.address;
+        }
+      }
+    }
+  };
+
+  const contents = {
+    "dns.test": [
+      {
+        name: "@",
+        type: "A",
+        data: getLocalIP(),
+      },
+    ],
+  };
+
+  writeFileSync("db.json", JSON.stringify(contents));
+}
 
 const server = createSocket("udp4");
 
