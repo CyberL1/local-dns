@@ -96,7 +96,7 @@ app.post(
     }
 
     const record: DNSRecord = {
-      name: req.body.name,
+      name: req.body.name.toLowerCase(),
       type: req.body.type,
       ttl: req.body.ttl || 300,
       data: req.body.data,
