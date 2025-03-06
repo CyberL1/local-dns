@@ -9,7 +9,7 @@ export interface DBSettings {
 
 export interface DNSRecord {
   name: string;
-  type: "A";
+  type: "A" | "CNAME";
   ttl: number;
   data: string;
 }

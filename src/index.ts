@@ -69,7 +69,7 @@ server.on("message", (msg, rinfo) => {
     console.warn(`[DOMAIN:${domain}] Not in DB`);
 
     if (db.settings.queryTheOuterWorld) {
-      console.warn(`[DOMAIN:${domain}] Querying the outer world`);
+      console.log(`[DOMAIN:${domain}] Querying the outer world`);
       queryTheOtherWorld(server, incomingReq, rinfo);
     }
 
@@ -92,6 +92,62 @@ server.on("message", (msg, rinfo) => {
         ttl: record.ttl,
         data: record.data,
       });
+    } else if (record.type === "CNAME") {
+      const visited = new Set();
+
+      while (record.data) {
+        if (visited.has(record.data)) {
+          console.warn(`[CNAME LOOP DETECTED] ${record.data}`);
+          return;
+        }
+        visited.add(record.data);
+
+        answers.push({
+          name,
+          type: "CNAME",
+          class: "IN",
+          ttl: record.ttl,
+          data: record.data,
+        });
+
+        if (!db.records[record.data]) {
+          console.warn(`[DOMAIN:${record.data}] Not in DB`);
+
+          if (db.settings.queryTheOuterWorld) {
+            console.warn(
+              `[DOMAIN:${record.data}] Querying the outer world for CNAME not implemented`,
+            );
+          }
+          return;
+        }
+
+        const recordIndex = db.records[record.data].findIndex(
+          (r) =>
+            r.name ===
+            (domain.split(".").length > 2
+              ? domain.split(".").slice(0, -2).join(".")
+              : "@"),
+        );
+
+        const targetRecord = db.records[record.data][recordIndex];
+
+        if (!targetRecord) {
+          return;
+        }
+
+        if (targetRecord.type === "CNAME") {
+          record.data = targetRecord.data;
+        } else {
+          answers.push({
+            name: targetRecord.name === "@" ? record.data : targetRecord.name,
+            type: targetRecord.type,
+            class: "IN",
+            ttl: targetRecord.ttl,
+            data: targetRecord.data,
+          });
+          return;
+        }
+      }
     }
   });
 
