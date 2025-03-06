@@ -6,6 +6,13 @@ Add domain
   <label for="name">Name:</label>
   <input name="name" required><br>
   <button type="submit">Add domain</button>
+</form><br>
+
+DNS settings
+<form id="settings">
+  <label for="queryTheOuterWorld">queryTheOuterWorld</label>
+  <input type="checkbox" name="queryTheOuterWorld"><br>
+  <button type="submit">Update settings</button>
 </form>
 
 <script>
@@ -82,5 +89,42 @@ Add domain
     }
 
     this.reset();
+  });
+
+  async function loadSettings() {
+    const response = await fetch("/api/settings");
+    const settings = await response.json();
+
+    Object.entries(settings).forEach(([name, value]) => {
+      const settingValueElement = document.querySelector(`form#settings label[for=${name}]`).nextElementSibling;
+
+      if (settingValueElement.type === "checkbox") {
+        settingValueElement.checked = value;
+      }
+    });
+  }
+
+  loadSettings();
+
+  document.getElementById("settings").addEventListener("submit", async function (event) {
+    event.preventDefault();
+
+    const formData = new FormData(this);
+    const dataObject = Object.fromEntries(formData.entries());
+
+    const body = {
+      queryTheOuterWorld: dataObject.queryTheOuterWorld === "on"
+    }
+
+    const response = await fetch("/api/settings", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
+    const settings = await response.json();
+
+    Object.entries(settings).forEach(([name, value]) => {
+      const settingValueElement = document.querySelector(`form#settings label[for=${name}]`).nextElementSibling;
+
+      if (settingValueElement.type === "checkbox") {
+        settingValueElement.checked = value;
+      }
+    });
   });
 </script>

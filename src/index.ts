@@ -4,8 +4,9 @@ import "./dnsAdmin/index.ts";
 import { createSocket } from "dgram";
 import { existsSync, readFileSync, writeFileSync } from "fs";
 import dnsPacket from "dns-packet";
-import type { DNSRecord } from "./types.ts";
+import type { DB, DNSRecord } from "./types.ts";
 import os from "os";
+import { queryTheOtherWorld } from "./utils.ts";
 
 if (!existsSync("db.json")) {
   console.log("DB does not exist, creating");
@@ -20,18 +21,21 @@ if (!existsSync("db.json")) {
       }
     }
 
-    return "127.0.0.1"
+    return "127.0.0.1";
   };
 
-  const contents: { [key: string]: DNSRecord[] } = {
-    "dns.test": [
-      {
-        name: "@",
-        type: "A",
-        ttl: 300,
-        data: getLocalIP(),
-      },
-    ],
+  const contents: DB = {
+    settings: { queryTheOuterWorld: false },
+    records: {
+      "dns.test": [
+        {
+          name: "@",
+          type: "A",
+          ttl: 300,
+          data: getLocalIP(),
+        },
+      ],
+    },
   };
 
   writeFileSync("db.json", JSON.stringify(contents));
@@ -40,7 +44,9 @@ if (!existsSync("db.json")) {
 const server = createSocket("udp4");
 
 server.on("message", (msg, rinfo) => {
-  const db = JSON.parse(readFileSync("db.json", { encoding: "utf-8" }));
+  const dbContents = readFileSync("db.json", { encoding: "utf-8" });
+  const db: DB = JSON.parse(dbContents);
+
   const incomingReq = dnsPacket.decode(msg);
 
   if (!incomingReq.questions) {
@@ -57,10 +63,16 @@ server.on("message", (msg, rinfo) => {
     domain = domain.split(".").slice(-2).join(".");
   }
 
-  const ipFromDb: DNSRecord[] = db[domain];
+  const ipFromDb: DNSRecord[] = db.records[domain];
 
   if (!ipFromDb) {
-    console.error(`Domain "${domain}" not found`);
+    console.warn(`[DOMAIN:${domain}] Not in DB`);
+
+    if (db.settings.queryTheOuterWorld) {
+      console.warn(`[DOMAIN:${domain}] Querying the outer world`);
+      queryTheOtherWorld(server, incomingReq, rinfo);
+    }
+
     return;
   }
 

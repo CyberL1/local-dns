@@ -14,9 +14,34 @@ app.get("/edit/:name", (_req, reply) => {
   return readFileSync(`${import.meta.dirname}/views/edit.html`);
 });
 
+app.get("/api/settings", () => {
+  const db = JSON.parse(readFileSync("db.json", { encoding: "utf-8" }));
+  return db.settings;
+});
+
+app.post(
+  "/api/settings",
+  (req: FastifyRequest<{ Body: { [key: string]: unknown }[] }>) => {
+    const db = JSON.parse(readFileSync("db.json", { encoding: "utf-8" }));
+
+    for (const key of Object.keys(db.settings)) {
+      if (!(key in req.body)) {
+        delete db.settings[key];
+      }
+    }
+
+    for (const [key, value] of Object.entries(req.body)) {
+      db.settings[key] = value;
+    }
+
+    writeFileSync("db.json", JSON.stringify(db), { encoding: "utf-8" });
+    return db.settings;
+  },
+);
+
 app.get("/api/domains", () => {
   const db = JSON.parse(readFileSync("db.json", { encoding: "utf-8" }));
-  return db;
+  return db.records;
 });
 
 app.post(
@@ -25,15 +50,15 @@ app.post(
     const db = JSON.parse(readFileSync("db.json", { encoding: "utf-8" }));
     const domain = req.body.domainName;
 
-    if (db[domain]) {
+    if (db.records[domain]) {
       reply.code(500);
       return { error: "Domain already exists" };
     }
 
-    db[domain] = [];
+    db.records[domain] = [];
 
     writeFileSync("db.json", JSON.stringify(db), { encoding: "utf-8" });
-    return db;
+    return db.records;
   },
 );
 
@@ -41,7 +66,7 @@ app.get(
   "/api/domains/:name",
   (req: FastifyRequest<{ Params: { name: string } }>) => {
     const db = JSON.parse(readFileSync("db.json", { encoding: "utf-8" }));
-    const domain = db[req.params.name];
+    const domain = db.records[req.params.name];
 
     if (!domain) {
       return { error: "Domain not found" };
@@ -61,7 +86,7 @@ app.post(
     reply,
   ) => {
     const db = JSON.parse(readFileSync("db.json", { encoding: "utf-8" }));
-    const domain = db[req.params.name];
+    const domain = db.records[req.params.name];
 
     if (
       domain.find((r) => r.name === req.body.name && r.type === req.body.type)
@@ -88,15 +113,14 @@ app.delete(
   "/api/domains/:name",
   (req: FastifyRequest<{ Params: { name: string } }>, reply) => {
     const db = JSON.parse(readFileSync("db.json", { encoding: "utf-8" }));
-
     const domain = req.params.name;
 
-    if (!db[domain]) {
+    if (!db.records[domain]) {
       reply.code(500);
       return { error: "Domain does not exist" };
     }
 
-    delete db[domain];
+    delete db.records[domain];
 
     writeFileSync("db.json", JSON.stringify(db), { encoding: "utf-8" });
     return db;
@@ -111,12 +135,12 @@ app.delete(
     const domain = req.params.name;
     const recordIndex = Number(req.params.index);
 
-    if (!db[domain][recordIndex]) {
+    if (!db.records[domain][recordIndex]) {
       reply.code(500);
       return { error: "Record does not exist" };
     }
 
-    db[domain].splice(recordIndex, 1);
+    db.records[domain].splice(recordIndex, 1);
 
     writeFileSync("db.json", JSON.stringify(db), { encoding: "utf-8" });
     return db;
