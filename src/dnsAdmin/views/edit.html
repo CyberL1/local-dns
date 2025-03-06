@@ -1,0 +1,130 @@
+<div id="title">Records for </div><br>
+<div id="records">
+  <table>
+    <thead>
+      <tr>
+        <th>Record</th>
+        <th>Name</th>
+        <th>TTL</th>
+        <th>Data</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+    </tbody>
+  </table>
+</div><br>
+
+Add record
+<form id="add">
+  <label for="name">Name:</label>
+  <input name="name" required><br>
+  <label for="type">Type:</label>
+  <select name="type" required>
+    <option id="A">A</option>
+  </select><br>
+  <label for="ttl">TTL:</label>
+  <input type="number" name="ttl" placeholder="300" min="1"><br>
+  <label for="data">Data:</label>
+  <input name="data" required><br>
+  <button type="submit">Add record</button>
+</form>
+
+<script>
+  async function loadDomain() {
+    const domainName = location.pathname.split("/")[2]
+    const response = await fetch(`/api/domains/${domainName}`);
+
+    document.getElementById("title").innerHTML += domainName
+    updateRecordsTable();
+  }
+
+  loadDomain();
+
+  async function updateRecordsTable() {
+    const domainName = location.pathname.split("/")[2]
+    const response = await fetch(`/api/domains/${domainName}`);
+    const records = await response.json();
+
+    const tbody = document.querySelector("#records tbody");
+    tbody.innerHTML = "";
+
+    records.forEach((record, index) => {
+      const tr = document.createElement("tr");
+      tr.id = index;
+
+      const tdRecord = document.createElement("td");
+      tdRecord.textContent = record.type;
+      tr.appendChild(tdRecord);
+
+      const tdName = document.createElement("td");
+      tdName.textContent = record.name;
+      tr.appendChild(tdName);
+
+      const tdTTL = document.createElement("td");
+      tdTTL.textContent = record.ttl;
+      tr.appendChild(tdTTL);
+
+      const tdData = document.createElement("td");
+      tdData.textContent = record.data;
+      tr.appendChild(tdData);
+
+      const tdActions = document.createElement("td");
+
+      const deleteButton = document.createElement("button");
+      deleteButton.textContent = "Delete";
+
+      deleteButton.onclick = () => {
+        if (confirm(`Do you really want to delete the record?`)) {
+          deleteRecord(index);
+        }
+      }
+
+      tdActions.appendChild(deleteButton);
+      tr.appendChild(tdActions);
+
+      tbody.appendChild(tr);
+    });
+  }
+
+  async function deleteRecord(index) {
+    const response = await fetch(`/api/domains/${location.pathname.split("/")[2]}/${index}`, {
+      method: "DELETE"
+    });
+
+    if (response.ok) {
+      updateRecordsTable();
+    } else {
+      const { error } = await response.json();
+      alert(`Failed to delete record: ${error}`);
+    }
+  };
+
+  document.getElementById("add").addEventListener("submit", async function (event) {
+    event.preventDefault();
+
+    const formData = new FormData(this);
+
+    const type = formData.get("type");
+    const name = formData.get("name");
+    const ttl = formData.get("ttl");
+    const data = formData.get("data");
+
+    const response = await fetch(`/api/domains/${location.pathname.split("/")[2]}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ type, name, ttl, data })
+    });
+
+    if (response.ok) {
+      updateRecordsTable();
+    } else {
+      const { error } = await response.json();
+      alert(`Failed to add record: ${error}`);
+    }
+
+    this.reset();
+  });
+</script>

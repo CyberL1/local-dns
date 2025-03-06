@@ -1,3 +1,6 @@
+// Run the bundled DNS Admin Panel
+import "./dnsAdmin/index.ts";
+
 import { createSocket } from "dgram";
 import { existsSync, readFileSync, writeFileSync } from "fs";
 import dnsPacket from "dns-packet";
@@ -16,13 +19,16 @@ if (!existsSync("db.json")) {
         }
       }
     }
+
+    return "127.0.0.1"
   };
 
-  const contents = {
+  const contents: { [key: string]: DNSRecord[] } = {
     "dns.test": [
       {
         name: "@",
         type: "A",
+        ttl: 300,
         data: getLocalIP(),
       },
     ],
@@ -71,7 +77,7 @@ server.on("message", (msg, rinfo) => {
         name,
         type: record.type,
         class: "IN",
-        ttl: record.ttl || 300,
+        ttl: record.ttl,
         data: record.data,
       });
     }

@@ -1,0 +1,86 @@
+<div id="title">Domains</div><br>
+<div id="domains"></div><br>
+
+Add domain
+<form id="add">
+  <label for="name">Name:</label>
+  <input name="name" required><br>
+  <button type="submit">Add domain</button>
+</form>
+
+<script>
+  async function loadDomains() {
+    const response = await fetch("/api/domains");
+    const domains = await response.json();
+
+    Object.keys(domains).forEach(domain => {
+      addDomainDiv(domain);
+    });
+  }
+
+  loadDomains();
+
+  async function addDomainDiv(domainName) {
+    const domainsContainer = document.querySelector("div#domains");
+
+    const div = document.createElement("div");
+    div.id = domainName;
+
+    const nameSpan = document.createElement("span");
+    nameSpan.id = domainName;
+    nameSpan.innerText = `${domainName} `;
+
+    const editButton = document.createElement("button");
+    editButton.innerText = "Edit";
+    editButton.onclick = () => location.href = `/edit/${domainName}`;
+
+    const deleteButton = document.createElement("button");
+    deleteButton.innerText = "Delete";
+
+    deleteButton.onclick = () => {
+      if (confirm(`Do you really want to delete ${domainName}?`)) {
+        deleteDomain(domainName)
+      }
+    }
+
+    div.append(nameSpan, editButton, deleteButton);
+    domainsContainer.append(div);
+  };
+
+  async function deleteDomain(domainName) {
+    const response = await fetch(`/api/domains/${domainName}`, {
+      method: "DELETE"
+    });
+
+    if (response.ok) {
+      document.getElementById(domainName).remove();
+    } else {
+      const { error } = await response.json();
+      alert(`Failed to delete domain: ${error}`);
+    }
+  };
+
+  document.getElementById("add").addEventListener("submit", async function (event) {
+    event.preventDefault();
+
+    const formData = new FormData(this);
+    const domainName = formData.get("name");
+
+    const response = await fetch("/api/domains", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ domainName })
+    });
+
+    if (response.ok) {
+      addDomainDiv(domainName)
+    } else {
+      const { error } = await response.json();
+      alert(`Failed to add domain: ${error}`);
+    }
+
+    this.reset();
+  });
+</script>
